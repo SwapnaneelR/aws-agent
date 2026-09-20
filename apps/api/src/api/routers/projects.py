@@ -14,8 +14,14 @@ router = APIRouter(prefix="/api/projects", tags=["projects"])
 @router.post("/", response_model=ProjectOut, status_code=201)
 async def create_project(body: ProjectCreate, db: AsyncSession = Depends(get_db)) -> ProjectOut:
     org_result = await db.execute(select(Org).where(Org.id == body.org_id))
-    if not org_result.scalar_one_or_none():
-        raise HTTPException(status_code=404, detail="Org not found")
+    org = org_result.scalar_one_or_none()
+    if not org:
+        if body.org_id == "org_default_horsemen":
+            org = Org(id="org_default_horsemen", name="Default Organization")
+            db.add(org)
+            await db.commit()
+        else:
+            raise HTTPException(status_code=404, detail="Org not found")
 
     project = Project(
         id=str(uuid.uuid4()),
