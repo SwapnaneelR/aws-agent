@@ -12,6 +12,16 @@ from api.schemas.models import ArchVersionOut, MessageOut, SessionCreate, Sessio
 router = APIRouter(prefix="/api/sessions", tags=["sessions"])
 
 
+@router.get("/project/{project_id}", response_model=list[SessionOut])
+async def list_project_sessions(project_id: str, db: AsyncSession = Depends(get_db)) -> list[SessionOut]:
+    result = await db.execute(
+        select(AgentSession)
+        .where(AgentSession.project_id == project_id)
+        .order_by(AgentSession.created_at.desc())
+    )
+    return [SessionOut.model_validate(s) for s in result.scalars().all()]
+
+
 @router.post("/", response_model=SessionOut, status_code=201)
 async def create_session(body: SessionCreate, db: AsyncSession = Depends(get_db)) -> SessionOut:
     project_result = await db.execute(select(Project).where(Project.id == body.project_id))
